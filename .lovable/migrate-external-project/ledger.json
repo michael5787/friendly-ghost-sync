@@ -1,0 +1,92 @@
+{
+  "source": "github: https://github.com/michael5787/friendly-ghost-importer",
+  "project_name": "Madauros Code Hub",
+  "stack": {
+    "framework": "TanStack Start v1 + React 19",
+    "styling": "Tailwind CSS v4 + shadcn/ui",
+    "backend": "Lovable Cloud (Supabase)",
+    "auth": "Supabase Auth with custom space isolation (talameed/taleem/admin)"
+  },
+  "routes": [
+    "/",
+    "/talameed",
+    "/taleem",
+    "/admin",
+    "/reset-password",
+    "/api/public/notify-submission"
+  ],
+  "schema_tables": [
+    "profiles",
+    "user_roles",
+    "levels",
+    "classes",
+    "teacher_classes",
+    "resources",
+    "submissions",
+    "submission_comments",
+    "notifications"
+  ],
+  "bundled_records": {
+    "coverage": "absent",
+    "tables_missing_records": [
+      "classes",
+      "levels",
+      "notifications",
+      "profiles",
+      "resources",
+      "submission_comments",
+      "submissions",
+      "teacher_classes",
+      "user_roles"
+    ]
+  },
+  "required_secrets": [],
+  "warnings": [
+    "Bundled records are missing for all schema tables.",
+    "Source .env excluded from inspection; Lovable Cloud now manages Supabase credentials."
+  ],
+  "capabilities": [
+    {
+      "capability": "authentication",
+      "source": "src/integrations/supabase/*, src/lib/spaces.ts, src/components/SpaceAuth.tsx",
+      "outcome": "preserve",
+      "status": "pending",
+      "next_action": "Migrate to Lovable Cloud-managed Supabase auth; preserve custom space isolation."
+    },
+    {
+      "capability": "database_schema",
+      "source": "supabase/setup-external.sql, supabase/migrations/*",
+      "outcome": "preserve",
+      "status": "pending",
+      "next_action": "Apply schema via Lovable Cloud migration tool."
+    },
+    {
+      "capability": "database_records",
+      "source": "n/a",
+      "outcome": "pending",
+      "status": "blocked",
+      "next_action": "Request bundled record export from source project; no records were supplied."
+    },
+    {
+      "capability": "storage",
+      "source": "src/components/resources/*",
+      "outcome": "preserve",
+      "status": "pending",
+      "next_action": "Ensure storage bucket exists for resources/submissions."
+    },
+    {
+      "capability": "routes_and_pages",
+      "source": "src/routes/*, src/components/*",
+      "outcome": "preserve",
+      "status": "pending",
+      "next_action": "Copy route and component files into current project."
+    },
+    {
+      "capability": "public_api",
+      "source": "src/routes/api/public/notify-submission.ts",
+      "outcome": "preserve",
+      "status": "pending",
+      "next_action": "Copy public API route and verify webhook behavior."
+    }
+  ]
+}
