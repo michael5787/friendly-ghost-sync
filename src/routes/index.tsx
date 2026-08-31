@@ -29,28 +29,31 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <PublicBackdrop>
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 pb-16 pt-24">
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 pb-10 pt-24">
       <MainNav space="talameed" />
-      <div className="text-center">
-        <div dir="ltr" className="font-wordmark text-5xl tracking-tight">
-          <span className="text-brand-green">m</span>
-          <span className="text-brand-green">a</span>
-          <span className="text-brand-green">d</span>
-          <span className="text-brand-green">a</span>
-          <span className="text-brand-red">u</span>
-          <span className="text-brand-red">r</span>
-          <span className="text-brand-red">o</span>
-          <span className="text-brand-red">s</span>
+
+      <div className="w-full max-w-[450px] rounded-[28px] border border-border bg-card/95 px-8 py-10 shadow-lg backdrop-blur-sm sm:px-11">
+        <div className="mb-6 flex flex-col items-center gap-2">
+          <div dir="ltr" className="font-wordmark text-3xl tracking-tight">
+            <span className="text-brand-green">m</span>
+            <span className="text-brand-green">a</span>
+            <span className="text-brand-green">d</span>
+            <span className="text-brand-green">a</span>
+            <span className="text-brand-red">u</span>
+            <span className="text-brand-red">r</span>
+            <span className="text-brand-red">o</span>
+            <span className="text-brand-red">s</span>
+            <span className="ms-2 align-middle text-sm text-muted-foreground">/ talameed</span>
+          </div>
+          <span className="text-xs tracking-wide text-muted-foreground" dir="ltr">
+            talameed.madauros
+          </span>
         </div>
-        <h1 className="mt-4 text-xl font-normal text-foreground">فضاء التلاميذ</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          سجّل الدخول للوصول إلى دروسك وواجباتك
-        </p>
+
+        <StudentLogin />
       </div>
 
-      <StudentLogin />
-
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="mt-6 flex items-center gap-4 text-xs text-muted-foreground">
         <Link to="/taleem" className="underline underline-offset-4 hover:text-foreground">
           وصول الأساتذة
         </Link>
@@ -119,14 +122,14 @@ function StudentLogin() {
   };
 
   return (
-    <div className="w-full max-w-[420px] rounded-[28px] border border-border bg-card px-8 py-10 sm:px-10">
+    <>
       <h2 className="text-center text-2xl font-normal text-foreground">
         {mode === "login" ? "تسجيل الدخول" : mode === "signup" ? "إنشاء حساب" : "نسيت كلمة المرور"}
       </h2>
       <p className="mt-2 text-center text-sm text-muted-foreground">
         {mode === "forgot"
           ? "أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور."
-          : "talameed.madauros"}
+          : "سجّل الدخول للوصول إلى دروسك وواجباتك"}
       </p>
 
       <form onSubmit={submit} className="mt-8 space-y-5">
@@ -181,6 +184,6 @@ function StudentLogin() {
           </button>
         </div>
       </form>
-    </div>
+    </>
   );
 }
