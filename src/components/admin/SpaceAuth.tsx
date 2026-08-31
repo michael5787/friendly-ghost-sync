@@ -181,19 +181,6 @@ export function SpaceAuth({ space, children }: Props) {
           />
         )}
 
-        {mode === "login" && space !== "talameed" ? (
-          <button
-            type="button"
-            className="btn-text"
-            onClick={() => {
-              setMode("forgot");
-              setError(null);
-              setMessage(null);
-            }}
-          >
-            نسيت كلمة المرور؟
-          </button>
-        ) : null}
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         {message ? <p className="text-sm text-success">{message}</p> : null}
