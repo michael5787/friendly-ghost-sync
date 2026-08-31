@@ -184,6 +184,6 @@ function StudentLogin() {
           </button>
         </div>
       </form>
-    </div>
+    </>
   );
 }
