@@ -1,7 +1,5 @@
 -- ============================================================================
--- Madaurous — Schéma complet pour projet Supabase externe
--- À exécuter dans : Supabase Dashboard → SQL Editor (projet vffhwfkivihduspbmxdh)
--- Le script est idempotent : il peut être relancé sans erreur ni perte de données.
+-- Madaurous — Schéma complet (buckets créés via l'outil Storage)
 -- ============================================================================
 
 -- 1. Types énumérés ------------------------------------------------------------
@@ -149,7 +147,7 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
   )
 $$;
 
--- 6. Ressources pédagogiques ---------------------------------------------------
+-- 6. Ressources pédagogiques --------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.resources (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -165,16 +163,11 @@ CREATE TABLE IF NOT EXISTS public.resources (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
--- Colonne classe (ajoutée après coup pour les bases déjà créées)
-ALTER TABLE public.resources
-  ADD COLUMN IF NOT EXISTS class_id uuid REFERENCES public.classes(id) ON DELETE SET NULL;
-
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.resources TO authenticated;
 GRANT ALL ON public.resources TO service_role;
 ALTER TABLE public.resources ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS resources_level_category_idx ON public.resources (level_id, category);
-CREATE INDEX IF NOT EXISTS resources_class_idx ON public.resources (class_id);
 DROP TRIGGER IF EXISTS update_resources_updated_at ON public.resources;
 CREATE TRIGGER update_resources_updated_at BEFORE UPDATE ON public.resources FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
@@ -219,7 +212,7 @@ CREATE INDEX IF NOT EXISTS submission_comments_submission_idx ON public.submissi
 
 CREATE TABLE IF NOT EXISTS public.notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+ user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   kind text NOT NULL,
   title text NOT NULL,
@@ -234,8 +227,7 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS notifications_user_idx ON public.notifications(user_id, read_at);
 
--- 8. Politiques RLS ------------------------------------------------------------
--- (CREATE POLICY n'est pas idempotent : on supprime puis recrée.)
+-- 8. Politiques RLS -----------------------------------------------------------
 
 DROP POLICY IF EXISTS "Users read own profile" ON public.profiles;
 CREATE POLICY "Users read own profile" ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id);
@@ -322,7 +314,7 @@ CREATE POLICY "Users delete own notifications" ON public.notifications FOR DELET
 DROP POLICY IF EXISTS "Actors create notifications" ON public.notifications;
 CREATE POLICY "Actors create notifications" ON public.notifications FOR INSERT TO authenticated WITH CHECK (auth.uid() = actor_id);
 
--- 9. Permissions des fonctions -------------------------------------------------
+-- 9. Permissions des fonctions ------------------------------------------------
 
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.update_updated_at_column() FROM PUBLIC, anon, authenticated;
@@ -331,11 +323,7 @@ GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticate
 REVOKE ALL ON FUNCTION public.teaches_student(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.teaches_student(uuid, uuid) TO authenticated, service_role;
 
--- 10. Buckets de stockage (privés) + politiques --------------------------------
-
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('resources', 'resources', false), ('submissions', 'submissions', false)
-ON CONFLICT (id) DO NOTHING;
+-- 10. Politiques de stockage (buckets créés via l'outil Storage) ---------------
 
 DROP POLICY IF EXISTS "Authenticated read resource files" ON storage.objects;
 CREATE POLICY "Authenticated read resource files" ON storage.objects
@@ -367,7 +355,7 @@ CREATE POLICY "Teachers read submission files" ON storage.objects
     AND EXISTS (SELECT 1 FROM public.submissions s WHERE s.file_path = name AND s.teacher_id = auth.uid())
   );
 
--- 11. Données initiales : les 7 niveaux et 7 classes (sans écraser l'existant) -
+-- 11. Données initiales : les 7 niveaux et 7 classes -------------------------
 
 INSERT INTO public.levels (id, name, code, position) VALUES
   ('c72155c6-4a88-437a-81a5-be7d423c260e', 'السنة الأولى ثانوي جذع مشترك علوم و تكنولوجيا', '1ASS', 1),

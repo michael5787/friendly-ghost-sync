@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { consumeAuthRedirect, getSpaceClient } from "@/lib/spaces";
-import { translateError } from "@/components/SpaceAuth";
+import { consumeAuthRedirect, getSpaceClient, SPACES } from "@/lib/spaces";
+import { translateError, Wordmark } from "@/components/SpaceAuth";
 import { MainNav } from "@/components/MainNav";
 import { PasswordField } from "@/components/PasswordField";
 import { PublicBackdrop } from "@/components/PublicBackdrop";
@@ -29,40 +29,20 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <PublicBackdrop>
-    <main className="flex min-h-screen flex-col items-center justify-center px-4 pb-10 pt-24">
-      <MainNav space="talameed" />
+      <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 pb-16 pt-24">
+        <MainNav space="talameed" />
+<StudentLogin />
 
-      <div className="w-full max-w-[450px] rounded-[28px] border border-border bg-card/95 px-8 py-10 shadow-lg backdrop-blur-sm sm:px-11">
-        <div className="mb-6 flex flex-col items-center gap-2">
-          <div dir="ltr" className="font-wordmark text-3xl tracking-tight">
-            <span className="text-brand-green">m</span>
-            <span className="text-brand-green">a</span>
-            <span className="text-brand-green">d</span>
-            <span className="text-brand-green">a</span>
-            <span className="text-brand-red">u</span>
-            <span className="text-brand-red">r</span>
-            <span className="text-brand-red">o</span>
-            <span className="text-brand-red">s</span>
-            <span className="ms-2 align-middle text-sm text-muted-foreground">/ talameed</span>
-          </div>
-          <span className="text-xs tracking-wide text-muted-foreground" dir="ltr">
-            talameed.madauros
-          </span>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <Link to="/taleem" className="underline underline-offset-4 hover:text-foreground">
+            وصول الأساتذة
+          </Link>
+          <span className="text-border">|</span>
+          <Link to="/admin" className="underline underline-offset-4 hover:text-foreground">
+            وصول الإدارة
+          </Link>
         </div>
-
-        <StudentLogin />
-      </div>
-
-      <div className="mt-6 flex items-center gap-4 text-xs text-muted-foreground">
-        <Link to="/taleem" className="underline underline-offset-4 hover:text-foreground">
-          وصول الأساتذة
-        </Link>
-        <span className="text-border">|</span>
-        <Link to="/admin" className="underline underline-offset-4 hover:text-foreground">
-          وصول الإدارة
-        </Link>
-      </div>
-    </main>
+      </main>
     </PublicBackdrop>
   );
 }
@@ -103,12 +83,12 @@ function StudentLogin() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/talameed`,
           data: { space: "talameed" },
         },
       });
       if (err) setError(translateError(err.message));
-      else setMessage(" تم إنشاء الحساب. سيتم تأكيده قريباً بعد مصادقة المشرف.");
+      else setMessage("تم إنشاء الحساب. تحقّق من بريدك الإلكتروني لتأكيده، ثم انتظر مصادقة المشرف.");
     } else {
       const { error: err } = await client.auth.signInWithPassword({ email, password });
       if (err) {
@@ -122,14 +102,20 @@ function StudentLogin() {
   };
 
   return (
-    <>
-      <h2 className="text-center text-2xl font-normal text-foreground">
+<div className="w-full max-w-[450px] rounded-[28px] border border-border bg-card/95 px-8 py-10 shadow-lg backdrop-blur-sm sm:px-11">
+      <div className="mb-6 flex flex-col items-center gap-2">
+        <Wordmark space="talameed" />
+        <span className="text-xs tracking-wide text-muted-foreground" dir="ltr">
+          {SPACES.talameed.host}
+        </span>
+      </div>
+      <h1 className="text-center text-2xl font-normal text-foreground">
         {mode === "login" ? "تسجيل الدخول" : mode === "signup" ? "إنشاء حساب" : "نسيت كلمة المرور"}
-      </h2>
+      </h1>
       <p className="mt-2 text-center text-sm text-muted-foreground">
         {mode === "forgot"
           ? "أدخل بريدك الإلكتروني وسنرسل لك رابطاً لإعادة تعيين كلمة المرور."
-          : "سجّل الدخول للوصول إلى دروسك وواجباتك"}
+          : SPACES.talameed.subtitle}
       </p>
 
       <form onSubmit={submit} className="mt-8 space-y-5">
@@ -163,6 +149,8 @@ function StudentLogin() {
           />
         )}
 
+        {/* Password reset link hidden (email sending limits) */}
+
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         {message ? <p className="text-sm text-success">{message}</p> : null}
@@ -184,6 +172,6 @@ function StudentLogin() {
           </button>
         </div>
       </form>
-    </>
+    </div>
   );
 }

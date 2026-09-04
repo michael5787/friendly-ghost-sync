@@ -4,6 +4,7 @@ import { UserRound } from "lucide-react";
 import { SpaceAuth, Wordmark } from "@/components/SpaceAuth";
 import { StudentResources } from "@/components/resources/StudentResources";
 import { StudentSubmissions } from "@/components/resources/StudentSubmissions";
+import { StudentAgenda } from "@/components/agenda/StudentAgenda";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { useNotifications } from "@/components/resources/useSubmissions";
 import { STATUS_LABEL } from "@/lib/spaces";
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/talameed")({
   component: Page,
 });
 
-type Tab = "resources" | "answers" | "notifications" | "account";
+type Tab = "resources" | "agenda" | "answers" | "notifications" | "account";
 
 function Page() {
   return (
@@ -70,6 +71,7 @@ function StudentShell({
 
   const tabs: { key: Tab; label: string; badge?: number }[] = [
     { key: "resources", label: "الدروس والتمارين" },
+    { key: "agenda", label: "المفكرة" },
     { key: "answers", label: "أجوبتي" },
     { key: "notifications", label: "الإشعارات", badge: notifications.unread },
     { key: "account", label: "حسابي" },
@@ -81,7 +83,7 @@ function StudentShell({
         <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Wordmark space="talameed" />
 
-          <nav className="nav-menu order-3 w-full justify-center sm:order-none sm:w-auto" aria-label="القائمة">
+          <nav className="nav-menu order-3 w-full min-w-0 max-w-full justify-start sm:order-none sm:w-auto sm:justify-center" aria-label="القائمة">
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -96,11 +98,11 @@ function StudentShell({
             ))}
           </nav>
 
-          <div className="user-chip">
+          <div className="user-chip min-w-0 max-w-[45vw]">
             <span className="user-avatar" aria-hidden="true">
               <UserRound size={18} />
             </span>
-            <span className="text-sm font-semibold text-foreground">{name}</span>
+            <span className="truncate text-sm font-semibold text-foreground">{name}</span>
           </div>
         </div>
       </header>
@@ -115,6 +117,8 @@ function StudentShell({
             studentName={name}
             onSubmitted={() => void notifications.reload()}
           />
+        ) : tab === "agenda" ? (
+          <StudentAgenda client={client} classId={classId} studentId={userId} />
         ) : tab === "answers" ? (
           <StudentSubmissions client={client} studentId={userId} />
         ) : tab === "notifications" ? (
