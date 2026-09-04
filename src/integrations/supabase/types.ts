@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_events: {
+        Row: {
+          class_id: string
+          created_at: string
+          description: string | null
+          event_date: string
+          id: string
+          kind: Database["public"]["Enums"]["agenda_kind"]
+          link_url: string | null
+          resource_id: string | null
+          teacher_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          description?: string | null
+          event_date: string
+          id?: string
+          kind?: Database["public"]["Enums"]["agenda_kind"]
+          link_url?: string | null
+          resource_id?: string | null
+          teacher_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["agenda_kind"]
+          link_url?: string | null
+          resource_id?: string | null
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_events_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_events_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           capacity: number | null
@@ -180,6 +237,7 @@ export type Database = {
       resources: {
         Row: {
           category: Database["public"]["Enums"]["resource_category"]
+          class_id: string | null
           created_at: string
           description: string | null
           file_name: string
@@ -194,6 +252,7 @@ export type Database = {
         }
         Insert: {
           category: Database["public"]["Enums"]["resource_category"]
+          class_id?: string | null
           created_at?: string
           description?: string | null
           file_name: string
@@ -208,6 +267,7 @@ export type Database = {
         }
         Update: {
           category?: Database["public"]["Enums"]["resource_category"]
+          class_id?: string | null
           created_at?: string
           description?: string | null
           file_name?: string
@@ -221,6 +281,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "resources_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "resources_level_id_fkey"
             columns: ["level_id"]
@@ -272,6 +339,8 @@ export type Database = {
           file_name: string
           file_path: string
           file_size: number | null
+          grade: number | null
+          graded_at: string | null
           id: string
           level_id: string | null
           mime_type: string | null
@@ -286,6 +355,8 @@ export type Database = {
           file_name: string
           file_path: string
           file_size?: number | null
+          grade?: number | null
+          graded_at?: string | null
           id?: string
           level_id?: string | null
           mime_type?: string | null
@@ -300,6 +371,8 @@ export type Database = {
           file_name?: string
           file_path?: string
           file_size?: number | null
+          grade?: number | null
+          graded_at?: string | null
           id?: string
           level_id?: string | null
           mime_type?: string | null
@@ -405,6 +478,7 @@ export type Database = {
     }
     Enums: {
       account_status: "pending" | "approved" | "rejected"
+      agenda_kind: "homework" | "evaluation"
       app_role: "super_admin"
       app_space: "talameed" | "taleem" | "admin"
       resource_category: "cours" | "exercices"
@@ -536,6 +610,7 @@ export const Constants = {
   public: {
     Enums: {
       account_status: ["pending", "approved", "rejected"],
+      agenda_kind: ["homework", "evaluation"],
       app_role: ["super_admin"],
       app_space: ["talameed", "taleem", "admin"],
       resource_category: ["cours", "exercices"],
