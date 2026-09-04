@@ -72,7 +72,20 @@ export function StudentSubmissions({
                     {row.file_size ? ` • ${formatSize(row.file_size)}` : ""} • {formatDate(row.created_at)}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {row.grade !== null ? (
+                    <span
+                      className="rounded-full bg-primary/15 px-3 py-1 text-sm font-bold text-primary"
+                      dir="ltr"
+                      title={row.graded_at ? `صُحّح في ${formatDate(row.graded_at)}` : undefined}
+                    >
+                      {row.grade}/20
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                      في انتظار التصحيح
+                    </span>
+                  )}
                   <button type="button" className="btn-text" onClick={() => open(row, false)}>
                     عرض
                   </button>
@@ -84,6 +97,7 @@ export function StudentSubmissions({
                   </button>
                 </div>
               </div>
+
 
               {row.comments.length > 0 ? (
                 <div className="mt-3 space-y-2 rounded-xl bg-primary/5 p-3">

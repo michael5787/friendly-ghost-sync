@@ -73,7 +73,12 @@ export function StudentResources({
     };
   }, [client, levelId, classId]);
 
-  const { rows, loading, error, setError } = useResourceList(client, effectiveLevel, teacherIds);
+  const { rows, loading, error, setError } = useResourceList(
+    client,
+    effectiveLevel,
+    teacherIds,
+    classId,
+  );
 
   const levelName = levels.find((l) => l.id === effectiveLevel)?.name;
 

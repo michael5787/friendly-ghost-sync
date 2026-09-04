@@ -1,17 +1,9 @@
--- ============================================================================
--- Madaurous — Schéma complet pour projet Supabase externe
--- À exécuter dans : Supabase Dashboard → SQL Editor (projet vffhwfkivihduspbmxdh)
--- Le script est idempotent : il peut être relancé sans erreur ni perte de données.
--- ============================================================================
-
--- 1. Types énumérés ------------------------------------------------------------
+-- Madaurous full schema (idempotent)
 
 DO $$ BEGIN CREATE TYPE public.app_role AS ENUM ('super_admin'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE public.app_space AS ENUM ('talameed', 'taleem', 'admin'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE public.account_status AS ENUM ('pending', 'approved', 'rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE public.resource_category AS ENUM ('cours', 'exercices'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
--- 2. Profils et rôles ----------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -38,8 +30,6 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
 GRANT SELECT ON public.user_roles TO authenticated;
 GRANT ALL ON public.user_roles TO service_role;
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-
--- 3. Fonctions d'autorisation --------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role public.app_role)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -80,8 +70,6 @@ CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- 4. Niveaux et classes --------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS public.levels (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -107,9 +95,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.classes TO authenticated;
 GRANT ALL ON public.classes TO service_role;
 ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE public.profiles
-  ALTER COLUMN level_id SET DATA TYPE uuid,
-  ALTER COLUMN class_id SET DATA TYPE uuid;
 DO $$ BEGIN
   ALTER TABLE public.profiles ADD CONSTRAINT profiles_level_id_fkey
     FOREIGN KEY (level_id) REFERENCES public.levels(id) ON DELETE SET NULL;
@@ -125,8 +110,6 @@ DROP TRIGGER IF EXISTS update_classes_updated_at ON public.classes;
 CREATE TRIGGER update_classes_updated_at BEFORE UPDATE ON public.classes FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- 5. Affectation multi-classes des enseignants ---------------------------------
 
 CREATE TABLE IF NOT EXISTS public.teacher_classes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -149,8 +132,6 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
   )
 $$;
 
--- 6. Ressources pédagogiques ---------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS public.resources (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   teacher_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -165,20 +146,13 @@ CREATE TABLE IF NOT EXISTS public.resources (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
--- Colonne classe (ajoutée après coup pour les bases déjà créées)
-ALTER TABLE public.resources
-  ADD COLUMN IF NOT EXISTS class_id uuid REFERENCES public.classes(id) ON DELETE SET NULL;
-
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.resources TO authenticated;
 GRANT ALL ON public.resources TO service_role;
 ALTER TABLE public.resources ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS resources_level_category_idx ON public.resources (level_id, category);
-CREATE INDEX IF NOT EXISTS resources_class_idx ON public.resources (class_id);
 DROP TRIGGER IF EXISTS update_resources_updated_at ON public.resources;
 CREATE TRIGGER update_resources_updated_at BEFORE UPDATE ON public.resources FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- 7. Rendus des élèves, commentaires, notifications ----------------------------
 
 CREATE TABLE IF NOT EXISTS public.submissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -233,9 +207,6 @@ GRANT ALL ON public.notifications TO service_role;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS notifications_user_idx ON public.notifications(user_id, read_at);
-
--- 8. Politiques RLS ------------------------------------------------------------
--- (CREATE POLICY n'est pas idempotent : on supprime puis recrée.)
 
 DROP POLICY IF EXISTS "Users read own profile" ON public.profiles;
 CREATE POLICY "Users read own profile" ON public.profiles FOR SELECT TO authenticated USING (auth.uid() = id);
@@ -322,52 +293,12 @@ CREATE POLICY "Users delete own notifications" ON public.notifications FOR DELET
 DROP POLICY IF EXISTS "Actors create notifications" ON public.notifications;
 CREATE POLICY "Actors create notifications" ON public.notifications FOR INSERT TO authenticated WITH CHECK (auth.uid() = actor_id);
 
--- 9. Permissions des fonctions -------------------------------------------------
-
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.update_updated_at_column() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated, service_role;
 REVOKE ALL ON FUNCTION public.teaches_student(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.teaches_student(uuid, uuid) TO authenticated, service_role;
-
--- 10. Buckets de stockage (privés) + politiques --------------------------------
-
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('resources', 'resources', false), ('submissions', 'submissions', false)
-ON CONFLICT (id) DO NOTHING;
-
-DROP POLICY IF EXISTS "Authenticated read resource files" ON storage.objects;
-CREATE POLICY "Authenticated read resource files" ON storage.objects
-  FOR SELECT TO authenticated USING (bucket_id = 'resources');
-DROP POLICY IF EXISTS "Teachers upload own resource files" ON storage.objects;
-CREATE POLICY "Teachers upload own resource files" ON storage.objects
-  FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'resources' AND (storage.foldername(name))[1] = auth.uid()::text);
-DROP POLICY IF EXISTS "Teachers update own resource files" ON storage.objects;
-CREATE POLICY "Teachers update own resource files" ON storage.objects
-  FOR UPDATE TO authenticated
-  USING (bucket_id = 'resources' AND (storage.foldername(name))[1] = auth.uid()::text)
-  WITH CHECK (bucket_id = 'resources' AND (storage.foldername(name))[1] = auth.uid()::text);
-DROP POLICY IF EXISTS "Teachers delete own resource files" ON storage.objects;
-CREATE POLICY "Teachers delete own resource files" ON storage.objects
-  FOR DELETE TO authenticated
-  USING (bucket_id = 'resources' AND (storage.foldername(name))[1] = auth.uid()::text);
-
-DROP POLICY IF EXISTS "Students manage own submission files" ON storage.objects;
-CREATE POLICY "Students manage own submission files" ON storage.objects
-  FOR ALL TO authenticated
-  USING (bucket_id = 'submissions' AND (storage.foldername(name))[1] = auth.uid()::text)
-  WITH CHECK (bucket_id = 'submissions' AND (storage.foldername(name))[1] = auth.uid()::text);
-DROP POLICY IF EXISTS "Teachers read submission files" ON storage.objects;
-CREATE POLICY "Teachers read submission files" ON storage.objects
-  FOR SELECT TO authenticated
-  USING (
-    bucket_id = 'submissions'
-    AND EXISTS (SELECT 1 FROM public.submissions s WHERE s.file_path = name AND s.teacher_id = auth.uid())
-  );
-
--- 11. Données initiales : les 7 niveaux et 7 classes (sans écraser l'existant) -
 
 INSERT INTO public.levels (id, name, code, position) VALUES
   ('c72155c6-4a88-437a-81a5-be7d423c260e', 'السنة الأولى ثانوي جذع مشترك علوم و تكنولوجيا', '1ASS', 1),

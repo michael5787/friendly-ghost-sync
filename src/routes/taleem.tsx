@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { SpaceAuth, Wordmark } from "@/components/SpaceAuth";
 import { TeacherResources } from "@/components/resources/TeacherResources";
 import { TeacherSubmissions } from "@/components/resources/TeacherSubmissions";
+import { TeacherAgenda } from "@/components/agenda/TeacherAgenda";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { useNotifications } from "@/components/resources/useSubmissions";
 import { STATUS_LABEL } from "@/lib/spaces";
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/taleem")({
   component: Page,
 });
 
-type Tab = "resources" | "answers" | "notifications" | "account";
+type Tab = "resources" | "agenda" | "answers" | "notifications" | "account";
 type ClassRow = Database["public"]["Tables"]["classes"]["Row"];
 
 function Page() {
@@ -86,6 +87,7 @@ function TeacherShell({
 
   const tabs: { key: Tab; label: string; badge?: number }[] = [
     { key: "resources", label: "الدروس والتمارين" },
+    { key: "agenda", label: "المفكرة" },
     { key: "answers", label: "أجوبة التلاميذ" },
     { key: "notifications", label: "الإشعارات", badge: notifications.unread },
     { key: "account", label: "حسابي" },
@@ -97,7 +99,7 @@ function TeacherShell({
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Wordmark space="taleem" />
 
-          <nav className="nav-menu order-3 w-full justify-center sm:order-none sm:w-auto" aria-label="القائمة">
+          <nav className="nav-menu order-3 w-full min-w-0 max-w-full justify-start sm:order-none sm:w-auto sm:justify-center" aria-label="القائمة">
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -112,11 +114,11 @@ function TeacherShell({
             ))}
           </nav>
 
-          <div className="user-chip">
+          <div className="user-chip min-w-0 max-w-[45vw]">
             <span className="user-avatar" aria-hidden="true">
               <UserRound size={18} />
             </span>
-            <span className="text-sm font-semibold text-foreground">{name}</span>
+            <span className="truncate text-sm font-semibold text-foreground">{name}</span>
           </div>
         </div>
       </header>
@@ -124,6 +126,8 @@ function TeacherShell({
       <main className="mx-auto w-full max-w-5xl px-4 py-10">
         {tab === "resources" ? (
           <TeacherResources client={client} teacherId={userId} />
+        ) : tab === "agenda" ? (
+          <TeacherAgenda client={client} teacherId={userId} classes={classes} />
         ) : tab === "answers" ? (
           <TeacherSubmissions client={client} teacherId={userId} classes={classes} />
         ) : tab === "notifications" ? (
