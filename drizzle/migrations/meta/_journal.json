@@ -8,6 +8,34 @@
       "when": 1791622328570,
       "tag": "0000_create_class_questions",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791622354627,
+      "tag": "0001_profiles_visible_within_class",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791622357293,
+      "tag": "0002_create_chapters",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791622360437,
+      "tag": "0003_profile_avatars",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791622363497,
+      "tag": "0004_homework_status",
+      "breakpoints": true
     }
   ]
 }

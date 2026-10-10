@@ -71,6 +71,41 @@ export type Database = {
           },
         ]
       }
+      chapters: {
+        Row: {
+          created_at: string
+          id: string
+          level_id: string
+          name: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level_id: string
+          name: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level_id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chapters_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           capacity: number | null
@@ -105,6 +140,44 @@ export type Database = {
             columns: ["level_id"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homework_status: {
+        Row: {
+          created_at: string
+          done: boolean
+          homework_id: string
+          id: string
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          done: boolean
+          homework_id: string
+          id?: string
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          homework_id?: string
+          id?: string
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homework_status_homework_id_fkey"
+            columns: ["homework_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_events"
             referencedColumns: ["id"]
           },
         ]
@@ -182,6 +255,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_path: string | null
           class_id: string | null
           created_at: string
           email: string
@@ -194,6 +268,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_path?: string | null
           class_id?: string | null
           created_at?: string
           email: string
@@ -206,6 +281,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_path?: string | null
           class_id?: string | null
           created_at?: string
           email?: string
@@ -284,6 +360,7 @@ export type Database = {
       questions: {
         Row: {
           body: string | null
+          chapter_id: string | null
           class_id: string
           created_at: string
           file_name: string | null
@@ -298,6 +375,7 @@ export type Database = {
         }
         Insert: {
           body?: string | null
+          chapter_id?: string | null
           class_id: string
           created_at?: string
           file_name?: string | null
@@ -312,6 +390,7 @@ export type Database = {
         }
         Update: {
           body?: string | null
+          chapter_id?: string | null
           class_id?: string
           created_at?: string
           file_name?: string | null
@@ -326,6 +405,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "questions_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "questions_class_id_fkey"
             columns: ["class_id"]
             isOneToOne: false
@@ -337,6 +423,7 @@ export type Database = {
       resources: {
         Row: {
           category: Database["public"]["Enums"]["resource_category"]
+          chapter_id: string | null
           class_id: string | null
           created_at: string
           description: string | null
@@ -352,6 +439,7 @@ export type Database = {
         }
         Insert: {
           category: Database["public"]["Enums"]["resource_category"]
+          chapter_id?: string | null
           class_id?: string | null
           created_at?: string
           description?: string | null
@@ -367,6 +455,7 @@ export type Database = {
         }
         Update: {
           category?: Database["public"]["Enums"]["resource_category"]
+          chapter_id?: string | null
           class_id?: string | null
           created_at?: string
           description?: string | null
@@ -381,6 +470,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "resources_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "resources_class_id_fkey"
             columns: ["class_id"]
@@ -569,6 +665,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      shares_class: {
+        Args: { _target: string; _viewer: string }
         Returns: boolean
       }
       teaches_student: {
