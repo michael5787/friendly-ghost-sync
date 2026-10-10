@@ -1,5 +1,4 @@
 DROP POLICY IF EXISTS "Authenticated read resource files" ON storage.objects;
-DROP POLICY IF EXISTS "Read resource files scoped by class" ON storage.objects;
 CREATE POLICY "Read resource files scoped by class"
 ON storage.objects FOR SELECT TO authenticated
 USING (

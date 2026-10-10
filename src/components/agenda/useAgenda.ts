@@ -30,7 +30,7 @@ export function shiftDay(key: string, days: number) {
 export function formatDayLabel(key: string) {
   const [y, m, d] = key.split("-").map(Number);
   const date = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
-  return date.toLocaleDateString("ar-MA", {
+  return date.toLocaleDateString("ar-DZ", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -40,22 +40,22 @@ export function formatDayLabel(key: string) {
 
 /**
  * Turns a PostgREST error into an actionable Arabic message.
- * The generic "تعذّر تحميل المفكرة" hid the real cause (missing table on the
+ * The generic "تعذّر تحميل المذكرة" hid the real cause (missing table on the
  * external database, or a permission problem), so we surface it explicitly.
  */
 export function describeAgendaError(err: { code?: string; message?: string } | null): string {
   const code = err?.code ?? "";
   const message = err?.message ?? "";
   if (code === "42P01" || code === "PGRST205" || /agenda_events.*(not exist|not find|schema cache)/i.test(message)) {
-    return "تعذّر تحميل المفكرة: جدول المفكرة غير موجود في قاعدة البيانات. نفّذ ملف supabase/setup-external.sql.";
+    return "تعذّر تحميل المذكرة: جدول المذكرة غير موجود في قاعدة البيانات. نفّذ ملف supabase/setup-external.sql.";
   }
   if (code === "42501" || code === "PGRST301" || /permission denied/i.test(message)) {
-    return "تعذّر تحميل المفكرة: ليست لديك صلاحية قراءة المفكرة.";
+    return "تعذّر تحميل المذكرة: ليست لديك صلاحية قراءة المذكرة.";
   }
   if (code === "42703" || /column .* does not exist/i.test(message)) {
-    return "تعذّر تحميل المفكرة: بنية جدول المفكرة قديمة. نفّذ ملف supabase/setup-external.sql.";
+    return "تعذّر تحميل المذكرة: بنية جدول المذكرة قديمة. نفّذ ملف supabase/setup-external.sql.";
   }
-  return "تعذّر تحميل المفكرة.";
+  return "تعذّر تحميل المذكرة.";
 }
 
 export function useAgenda(
@@ -99,6 +99,61 @@ export function useAgenda(
   }, [load]);
 
   return { rows, loading, error, setError, reload: load };
+}
+
+/** Évaluations par défaut créées sans date pour chaque trimestre. */
+export const DEFAULT_EXAMS: { trimester: "1" | "2" | "3"; title: string }[] = [
+  { trimester: "1", title: "الفرض الأول" },
+  { trimester: "1", title: "الفرض الثاني" },
+  { trimester: "1", title: "الامتحان" },
+  { trimester: "2", title: "الفرض الأول" },
+  { trimester: "2", title: "الفرض الثاني" },
+  { trimester: "2", title: "الامتحان" },
+  { trimester: "3", title: "الفرض الأول" },
+  { trimester: "3", title: "الفرض الثاني" },
+  { trimester: "3", title: "الامتحان" },
+];
+
+export const TRIMESTER_LABEL: Record<string, string> = {
+  "1": "الثلاثي الأول",
+  "2": "الثلاثي الثاني",
+  "3": "الثلاثي الثالث",
+};
+
+/**
+ * Évaluations sans date (event_date NULL) : visibles uniquement côté
+ * enseignant, elles n'apparaissent aux élèves qu'une fois une date assignée.
+ */
+export function useUndatedAgenda(client: Client, filter: { classId?: string; teacherId?: string }) {
+  const [rows, setRows] = useState<AgendaRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { classId, teacherId } = filter;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    let query = client
+      .from("agenda_events")
+      .select("*")
+      .is("event_date", null)
+      .order("trimester", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (classId) query = query.eq("class_id", classId);
+    if (teacherId) query = query.eq("teacher_id", teacherId);
+    const { data, error: err } = await query;
+    if (err) {
+      console.error("[agenda] undated load failed", err);
+      setRows([]);
+    } else {
+      setRows(data ?? []);
+    }
+    setLoading(false);
+  }, [client, classId, teacherId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { rows, loading, reload: load };
 }
 
 export type FirstPendingDayTarget =

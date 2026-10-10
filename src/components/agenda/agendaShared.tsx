@@ -34,7 +34,9 @@ export function useAgendaCounts(
       const { data } = await query;
       if (!active) return;
       const next: Record<string, number> = {};
-      for (const row of data ?? []) next[row.event_date] = (next[row.event_date] ?? 0) + 1;
+      for (const row of data ?? []) {
+        if (row.event_date) next[row.event_date] = (next[row.event_date] ?? 0) + 1;
+      }
       setCounts(next);
     })();
     return () => {
@@ -79,12 +81,14 @@ export function AgendaCard({
   client,
   row,
   resource,
+  className,
   onError,
   actions,
 }: {
   client: Client;
   row: AgendaRow;
   resource?: ResourceRow;
+  className?: string | undefined;
   onError: (msg: string) => void;
   actions?: React.ReactNode;
 }) {
@@ -113,8 +117,15 @@ export function AgendaCard({
             {isEval ? <ClipboardCheck size={18} /> : <BookOpen size={18} />}
           </span>
           <div>
-            <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${tint}`}>
-              {AGENDA_KIND_LABEL[row.kind]}
+            <span className="flex flex-wrap items-center gap-1.5">
+              <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${tint}`}>
+                {AGENDA_KIND_LABEL[row.kind]}
+              </span>
+              {className ? (
+                <span className="inline-block rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                  {className}
+                </span>
+              ) : null}
             </span>
             <h3 className="mt-1 text-base font-semibold leading-tight text-foreground">{row.title}</h3>
           </div>
@@ -160,4 +171,3 @@ export function AgendaCard({
     </article>
   );
 }
-
