@@ -36,6 +36,41 @@
       "when": 1791622363497,
       "tag": "0004_homework_status",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791622388236,
+      "tag": "0005_lesson_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791622391023,
+      "tag": "0006_school_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791622394370,
+      "tag": "0007_create_absences",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791622397711,
+      "tag": "0008_behavior_grades",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791622401157,
+      "tag": "0009_evaluation_grades",
+      "breakpoints": true
     }
   ]
 }

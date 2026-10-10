@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      absences: {
+        Row: {
+          class_id: string | null
+          created_at: string
+          end_date: string
+          id: string
+          justified: boolean
+          reason: string | null
+          start_date: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          class_id?: string | null
+          created_at?: string
+          end_date: string
+          id?: string
+          justified?: boolean
+          reason?: string | null
+          start_date: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          class_id?: string | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          justified?: boolean
+          reason?: string | null
+          start_date?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absences_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agenda_events: {
         Row: {
           class_id: string
@@ -67,6 +111,47 @@ export type Database = {
             columns: ["resource_id"]
             isOneToOne: false
             referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      behavior_grades: {
+        Row: {
+          class_id: string | null
+          comment: string | null
+          created_at: string
+          grade: number
+          id: string
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id?: string | null
+          comment?: string | null
+          created_at?: string
+          grade: number
+          id?: string
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string | null
+          comment?: string | null
+          created_at?: string
+          grade?: number
+          id?: string
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "behavior_grades_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
@@ -144,6 +229,47 @@ export type Database = {
           },
         ]
       }
+      evaluation_grades: {
+        Row: {
+          comment: string | null
+          created_at: string
+          evaluation_id: string
+          grade: number
+          id: string
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          evaluation_id: string
+          grade: number
+          id?: string
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          evaluation_id?: string
+          grade?: number
+          id?: string
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_grades_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       homework_status: {
         Row: {
           created_at: string
@@ -178,6 +304,50 @@ export type Database = {
             columns: ["homework_id"]
             isOneToOne: false
             referencedRelation: "agenda_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_logs: {
+        Row: {
+          class_id: string
+          content: string
+          created_at: string
+          end_time: string
+          id: string
+          log_date: string
+          start_time: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          content: string
+          created_at?: string
+          end_time: string
+          id?: string
+          log_date: string
+          start_time: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          content?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          log_date?: string
+          start_time?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_logs_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
@@ -492,6 +662,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      school_settings: {
+        Row: {
+          address: string
+          id: boolean
+          name: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string
+          id?: boolean
+          name?: string
+          phone?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          id?: boolean
+          name?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       submission_comments: {
         Row: {
