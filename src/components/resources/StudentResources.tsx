@@ -6,10 +6,11 @@ import { SUBMISSION_ACCEPT } from "@/lib/safeFile";
 import { submitAnswer } from "./submitAnswer";
 import {
   CATEGORY_LABEL,
-  formatSize,
   openResource,
   useLevels,
   useResourceList,
+  useChapters,
+  NO_CHAPTER_LABEL,
   type Category,
   type ResourceRow,
 } from "./useResources";
@@ -41,6 +42,7 @@ export function StudentResources({
   const [resolved, setResolved] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
+  const [chapterFilter, setChapterFilter] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -80,6 +82,7 @@ export function StudentResources({
     classId,
   );
 
+  const chapters = useChapters(client, effectiveLevel ?? null);
   const levelName = levels.find((l) => l.id === effectiveLevel)?.name;
 
   const open = async (row: ResourceRow, download: boolean) => {
@@ -140,6 +143,7 @@ export function StudentResources({
   const filtered = rows.filter(
     (r) =>
       (filter === "all" || r.category === filter) &&
+      (chapterFilter === "" || (chapterFilter === "none" ? r.chapter_id === null : r.chapter_id === chapterFilter)) &&
       (q === "" || r.title.toLowerCase().includes(q) || (r.description ?? "").toLowerCase().includes(q)),
   );
 
@@ -188,6 +192,16 @@ export function StudentResources({
             </option>
           ))}
         </select>
+        <select
+          className="field-input w-auto min-w-40 text-sm"
+          value={chapterFilter}
+          onChange={(e) => setChapterFilter(e.target.value)}
+          aria-label="تصفية حسب المحور"
+        >
+          <option value="">كل المحاور</option>
+          {chapters.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+          <option value="none">{NO_CHAPTER_LABEL}</option>
+        </select>
         <input
           className="field-input min-w-40 flex-1 text-sm"
           placeholder="بحث في العنوان أو الوصف…"
@@ -225,18 +239,19 @@ export function StudentResources({
                     {items.length}
                   </span>
                 </div>
+                {[...chapters.map((c) => ({ id: c.id as string | null, name: c.name })), { id: null, name: NO_CHAPTER_LABEL }]
+                  .filter((ch) => items.some((r) => r.chapter_id === ch.id))
+                  .map((ch) => (
+                <div key={ch.id ?? "none"}>
+                <div className="border-t border-border bg-muted/40 px-4 py-2 text-xs font-semibold text-muted-foreground">{ch.name}</div>
                 <ul className="divide-y divide-border">
-                  {items.map((r) => (
+                  {items.filter((r) => r.chapter_id === ch.id).map((r) => (
                     <li
                       key={r.id}
                       className="resource-row flex flex-wrap items-center justify-between gap-3 p-4"
                     >
                       <div>
                         <div className="text-sm font-semibold text-foreground">{r.title}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {r.mime_type === "application/pdf" ? "PDF" : "صورة"}
-                          {r.file_size ? ` • ${formatSize(r.file_size)}` : ""}
-                        </div>
                       </div>
                       <div className="flex gap-2">
                         <button type="button" className="btn-text" onClick={() => open(r, false)}>
@@ -259,6 +274,8 @@ export function StudentResources({
                     </li>
                   ))}
                 </ul>
+                </div>
+                  ))}
               </div>
             );
           })}

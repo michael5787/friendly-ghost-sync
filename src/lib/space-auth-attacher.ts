@@ -25,8 +25,24 @@ function currentSpaceFromPath(): SpaceKey | null {
 
 function isUsable(session: { access_token?: string; expires_at?: number } | null): boolean {
   if (!session?.access_token) return false;
-  if (session.expires_at && session.expires_at * 1000 <= Date.now()) return false;
+  // Treat a token expiring within the next minute as unusable: the request
+  // would otherwise reach the server just after expiry and fail as
+  // "Unauthorized" (the user sees "your session ended").
+  if (session.expires_at && session.expires_at * 1000 <= Date.now() + 60_000) return false;
   return true;
+}
+
+type AnyClient = { auth: { getSession: () => Promise<any>; refreshSession: () => Promise<any> } };
+
+async function usableToken(client: AnyClient): Promise<string | undefined> {
+  const { data } = await client.auth.getSession();
+  if (isUsable(data?.session)) return data.session.access_token as string;
+  // A stored-but-stale session can still be renewed with its refresh token.
+  if (data?.session) {
+    const { data: refreshed } = await client.auth.refreshSession();
+    if (isUsable(refreshed?.session)) return refreshed.session.access_token as string;
+  }
+  return undefined;
 }
 
 export const attachSpaceAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
@@ -42,18 +58,13 @@ export const attachSpaceAuth = createMiddleware({ type: "function" }).client(asy
     const order = candidates.filter((s, i) => candidates.indexOf(s) === i);
 
     for (const space of order) {
-      const { data } = await getSpaceClient(space).auth.getSession();
-      if (isUsable(data.session)) {
-        token = data.session!.access_token;
-        break;
-      }
+      token = await usableToken(getSpaceClient(space) as unknown as AnyClient);
+      if (token) break;
     }
   }
 
-  if (!token) {
-    const { data } = await supabase.auth.getSession();
-    if (isUsable(data.session)) token = data.session!.access_token;
-  }
+  if (!token) token = await usableToken(supabase as unknown as AnyClient);
 
   return next({ headers: token ? { Authorization: `Bearer ${token}` } : {} });
 });
+
