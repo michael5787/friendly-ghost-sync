@@ -71,6 +71,13 @@
       "when": 1791622401157,
       "tag": "0009_evaluation_grades",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791911629304,
+      "tag": "0010_course_files",
+      "breakpoints": true
     }
   ]
 }
