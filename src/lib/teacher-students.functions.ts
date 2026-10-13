@@ -56,7 +56,7 @@ export const createPlaceholderStudent = createServerFn({ method: "POST" })
         .eq("teacher_id", context.userId)
         .eq("class_id", data.classId)
         .maybeSingle();
-      if (!link) throw new Error("Forbidden");
+      if (!link) throw new Error("أنت غير مُسنَد إلى هذا القسم.");
     }
     const { data: cls } = await supabaseAdmin
       .from("classes")
