@@ -1,10 +1,22 @@
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { trimesterOf } from "@/lib/trimesters";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { CATEGORY_LABEL, useResourceList } from "@/components/resources/useResources";
 import { AgendaCalendar, formatDayLabelAr } from "./AgendaCalendar";
 import { LessonLog } from "./LessonLog";
+import { CourseFilesPanel } from "./CourseFilesPanel";
 import { AgendaCard, useAgendaCounts, useAttachedResources } from "./agendaShared";
 import {
   AGENDA_KIND_LABEL,
@@ -52,7 +64,15 @@ export function TeacherAgenda({
   }, []);
   const filter = { teacherId, ...(classId === "" ? {} : { classId }) };
   const { rows, loading, error, setError, reload } = useAgenda(client, filter, dateKey);
-  const undated = useUndatedAgenda(client, filter);
+  // Section « غير المبرمجة » : filtres propres (classe + trimestre), indépendants du filtre du haut.
+  const undated = useUndatedAgenda(client, { teacherId });
+  const [undatedTri, setUndatedTri] = useState<string>(() => trimesterOf(toDateKey(new Date())));
+  const [undatedClass, setUndatedClass] = useState<string>("");
+  // Fenêtre « إنشاء الفروض الافتراضية ».
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createClass, setCreateClass] = useState("");
+  const [createTri, setCreateTri] = useState<"1" | "2" | "3">(() => trimesterOf(toDateKey(new Date())));
+  const [createMsg, setCreateMsg] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const counts = useAgendaCounts(client, filter, dateKey, version);
   const resources = useAttachedResources(client, rows);
@@ -66,6 +86,8 @@ export function TeacherAgenda({
   const [linkUrl, setLinkUrl] = useState("");
   const [editing, setEditing] = useState<AgendaRow | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showUndated, setShowUndated] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   const reset = () => {
     setEditing(null);
@@ -77,6 +99,7 @@ export function TeacherAgenda({
   };
 
   const startEdit = (row: AgendaRow) => {
+    setShowForm(true);
     setEditing(row);
     setKind(row.kind);
     setFormClassId(row.class_id);
@@ -149,14 +172,40 @@ export function TeacherAgenda({
   };
 
 
-  /** Crée les 9 évaluations par défaut (3 par trimestre) sans date pour une classe. */
-  const createDefaults = async (targetClass: string) => {
-    setError(null);
+  /**
+   * Crée les 3 évaluations par défaut (sans date) d'un trimestre pour une classe,
+   * en sautant celles qui existent déjà (datées ou non) → aucun doublon.
+   */
+  const createDefaults = async () => {
+    setCreateMsg(null);
+    if (!createClass) {
+      setCreateMsg("اختر القسم.");
+      return;
+    }
     setBusy(true);
+    const { data: existing, error: readErr } = await client
+      .from("agenda_events")
+      .select("title")
+      .eq("teacher_id", teacherId)
+      .eq("class_id", createClass)
+      .eq("kind", "evaluation")
+      .eq("trimester", createTri);
+    if (readErr) {
+      setBusy(false);
+      setCreateMsg("تعذّر التحقق من الفروض الموجودة.");
+      return;
+    }
+    const have = new Set((existing ?? []).map((e) => e.title));
+    const missing = DEFAULT_EXAMS.filter((d) => d.trimester === createTri && !have.has(d.title));
+    if (missing.length === 0) {
+      setBusy(false);
+      setCreateMsg("الفروض والامتحان لهذا القسم وهذا الثلاثي موجودة مسبقاً.");
+      return;
+    }
     const { error: err } = await client.from("agenda_events").insert(
-      DEFAULT_EXAMS.map((d) => ({
+      missing.map((d) => ({
         teacher_id: teacherId,
-        class_id: targetClass,
+        class_id: createClass,
         kind: "evaluation" as AgendaKind,
         title: d.title,
         trimester: d.trimester,
@@ -164,8 +213,14 @@ export function TeacherAgenda({
       })),
     );
     setBusy(false);
-    if (err) setError("تعذّر إنشاء الفروض والامتحانات الافتراضية.");
-    else await undated.reload();
+    if (err) {
+      setCreateMsg("تعذّر إنشاء الفروض والامتحانات الافتراضية.");
+      return;
+    }
+    await undated.reload();
+    setUndatedClass(createClass);
+    setUndatedTri(createTri);
+    setCreateOpen(false);
   };
 
   /** Assigne la date actuellement sélectionnée → l'élément devient visible aux élèves. */
@@ -208,68 +263,6 @@ export function TeacherAgenda({
         <AgendaCalendar value={dateKey} onChange={navigate} counts={counts} />
       </div>
 
-      {/* الفروض والامتحانات الافتراضية بدون تاريخ — مخفية عن التلاميذ حتى تعيين تاريخ */}
-      <div className="mt-4 rounded-2xl border border-border bg-card/95 p-4 shadow-sm">
-        <h3 className="text-sm font-semibold text-foreground">الفروض والامتحانات غير المبرمجة</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          لا يراها التلاميذ. اختر اليوم المطلوب في المذكرة ثم اضغط «تعيين التاريخ» لبرمجة أي منها.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {classes.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className="btn-text text-xs"
-              disabled={busy}
-              onClick={() => void createDefaults(c.id)}
-            >
-              إنشاء الافتراضية — {c.name}
-            </button>
-          ))}
-        </div>
-        {undated.loading ? (
-          <p className="mt-3 text-sm text-muted-foreground">جارٍ التحميل…</p>
-        ) : undated.rows.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">لا توجد عناصر غير مبرمجة.</p>
-        ) : (
-          <div className="mt-3 space-y-4">
-            {(["1", "2", "3"] as const).map((tri) => {
-              const triRows = undated.rows.filter((r) => r.trimester === tri);
-              if (triRows.length === 0) return null;
-              return (
-                <div key={tri}>
-                  <h4 className="mb-2 text-xs font-semibold text-muted-foreground">{TRIMESTER_LABEL[tri]}</h4>
-                  <ul className="space-y-2">
-                    {triRows.map((row) => (
-                      <li
-                        key={row.id}
-                        className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 text-sm"
-                      >
-                        <span className="font-semibold text-foreground">{row.title}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {classes.find((c) => c.id === row.class_id)?.name ?? ""}
-                        </span>
-                        <span className="ms-auto flex gap-2">
-                          <button type="button" className="btn-text text-xs" onClick={() => void assignDate(row)}>
-                            تعيين التاريخ ({formatDayLabelAr(dateKey)})
-                          </button>
-                          <button type="button" className="btn-text text-xs" onClick={() => startEdit(row)}>
-                            تعديل
-                          </button>
-                          <button type="button" className="btn-text text-xs" onClick={() => void remove(row)}>
-                            حذف
-                          </button>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
       <LessonLog client={client} teacherId={teacherId} classes={classes} dateKey={dateKey} />
 
       <div className="mt-4">
@@ -283,61 +276,84 @@ export function TeacherAgenda({
         </select>
       </div>
 
-      <form onSubmit={submit} className="mt-4 grid gap-3 rounded-2xl border border-border bg-card/95 p-4 shadow-sm sm:grid-cols-2">
-        <p className="sm:col-span-2 text-sm font-semibold text-foreground">
-          {editing ? "تعديل عنصر" : "إضافة عنصر جديد"}
-        </p>
-        <select className="field-input" value={kind} onChange={(e) => setKind(e.target.value as AgendaKind)}>
-          <option value="homework">{AGENDA_KIND_LABEL.homework}</option>
-          <option value="evaluation">{AGENDA_KIND_LABEL.evaluation}</option>
-        </select>
-        <select className="field-input" value={formClassId} onChange={(e) => setFormClassId(e.target.value)}>
-          <option value="">اختر القسم</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <input
-          className="field-input sm:col-span-2"
-          placeholder="العنوان"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <textarea
-          className="field-input sm:col-span-2"
-          rows={3}
-          placeholder="نص الواجب أو التقييم"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-        <select className="field-input" value={resourceId} onChange={(e) => setResourceId(e.target.value)}>
-          <option value="">بدون ملف مرفق</option>
-          {myResources.map((r) => (
-            <option key={r.id} value={r.id}>
-              {CATEGORY_LABEL[r.category]} — {r.title}
-            </option>
-          ))}
-        </select>
-        <input
-          className="field-input"
-          placeholder="رابط (اختياري)"
-          dir="ltr"
-          value={linkUrl}
-          onChange={(e) => setLinkUrl(e.target.value)}
-        />
-        <div className="flex gap-2 sm:col-span-2">
-          <button type="submit" className="btn-primary" disabled={busy}>
-            {editing ? "حفظ التعديل" : "إضافة إلى المذكرة"}
-          </button>
-          {editing ? (
-            <button type="button" className="btn-text" onClick={reset}>
-              إلغاء
-            </button>
-          ) : null}
-        </div>
-      </form>
+      <Collapsible
+        open={showForm}
+        onOpenChange={setShowForm}
+        className="mt-4 rounded-2xl border border-border bg-card/95 p-4 shadow-sm"
+      >
+        <h3>
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-auto w-full justify-between gap-3 whitespace-normal text-start"
+            >
+              <span className="min-w-0 text-sm font-semibold text-foreground">
+                {editing ? "تعديل عنصر" : "إضافة عنصر جديد"}
+              </span>
+              <ChevronDown
+                size={18}
+                aria-hidden="true"
+                className={`shrink-0 text-muted-foreground motion-safe:transition-transform ${showForm ? "rotate-180" : ""}`}
+              />
+            </Button>
+          </CollapsibleTrigger>
+        </h3>
+        <CollapsibleContent forceMount hidden={!showForm}>
+          <form onSubmit={submit} className="mt-3 grid gap-3 sm:grid-cols-2">
+            <select className="field-input" value={kind} onChange={(e) => setKind(e.target.value as AgendaKind)}>
+              <option value="homework">{AGENDA_KIND_LABEL.homework}</option>
+              <option value="evaluation">{AGENDA_KIND_LABEL.evaluation}</option>
+            </select>
+            <select className="field-input" value={formClassId} onChange={(e) => setFormClassId(e.target.value)}>
+              <option value="">اختر القسم</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <input
+              className="field-input sm:col-span-2"
+              placeholder="العنوان"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <textarea
+              className="field-input sm:col-span-2"
+              rows={3}
+              placeholder="نص الواجب أو التقييم"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <select className="field-input" value={resourceId} onChange={(e) => setResourceId(e.target.value)}>
+              <option value="">بدون ملف مرفق</option>
+              {myResources.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {CATEGORY_LABEL[r.category]} — {r.title}
+                </option>
+              ))}
+            </select>
+            <input
+              className="field-input"
+              placeholder="رابط (اختياري)"
+              dir="ltr"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+            />
+            <div className="flex gap-2 sm:col-span-2">
+              <button type="submit" className="btn-primary" disabled={busy}>
+                {editing ? "حفظ التعديل" : "إضافة إلى المذكرة"}
+              </button>
+              {editing ? (
+                <button type="button" className="btn-text" onClick={reset}>
+                  إلغاء
+                </button>
+              ) : null}
+            </div>
+          </form>
+        </CollapsibleContent>
+      </Collapsible>
 
       {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
 
@@ -371,6 +387,170 @@ export function TeacherAgenda({
           ))
         )}
       </div>
+      {/* الفروض والامتحانات الافتراضية بدون تاريخ — في أسفل الصفحة وقابلة للطي */}
+      <Collapsible
+        open={showUndated}
+        onOpenChange={setShowUndated}
+        className="mt-4 rounded-2xl border border-border bg-card/95 p-4 shadow-sm"
+      >
+        <h3>
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-auto w-full justify-between gap-3 whitespace-normal text-start"
+            >
+              <span className="min-w-0 text-sm font-semibold text-foreground">
+                الفروض والامتحانات غير المبرمجة
+              </span>
+              <ChevronDown
+                size={18}
+                aria-hidden="true"
+                className={`shrink-0 text-muted-foreground motion-safe:transition-transform ${showUndated ? "rotate-180" : ""}`}
+              />
+            </Button>
+          </CollapsibleTrigger>
+        </h3>
+        <CollapsibleContent>
+          <p className="mt-1 text-xs text-muted-foreground">
+            لا يراها التلاميذ. اختر اليوم المطلوب في المذكرة ثم اضغط «تعيين التاريخ» لبرمجة أي منها.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select
+              className="field-input w-auto"
+              aria-label="القسم"
+              value={undatedClass}
+              onChange={(e) => setUndatedClass(e.target.value)}
+            >
+              <option value="">كل الأقسام</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="field-input w-auto"
+              aria-label="الثلاثي"
+              value={undatedTri}
+              onChange={(e) => setUndatedTri(e.target.value)}
+            >
+              <option value="">كل الثلاثيات</option>
+              {(["1", "2", "3"] as const).map((tri) => (
+                <option key={tri} value={tri}>
+                  {TRIMESTER_LABEL[tri]}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-primary ms-auto text-xs"
+              disabled={busy || classes.length === 0}
+              onClick={() => {
+                setCreateMsg(null);
+                setCreateClass(undatedClass || classes[0]?.id || "");
+                setCreateTri((undatedTri || trimesterOf(toDateKey(new Date()))) as "1" | "2" | "3");
+                setCreateOpen(true);
+              }}
+            >
+              إنشاء افتراضية
+            </button>
+          </div>
+          {undated.loading ? (
+            <p className="mt-3 text-sm text-muted-foreground">جارٍ التحميل…</p>
+          ) : undated.rows.filter((r) => undatedClass === "" || r.class_id === undatedClass).length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">لا توجد عناصر غير مبرمجة.</p>
+          ) : (
+            <div className="mt-3 space-y-4">
+              {(["1", "2", "3"] as const)
+                .filter((tri) => undatedTri === "" || tri === undatedTri)
+                .map((tri) => {
+                const triRows = undated.rows.filter(
+                  (r) => r.trimester === tri && (undatedClass === "" || r.class_id === undatedClass),
+                );
+                if (triRows.length === 0) return null;
+                return (
+                  <div key={tri}>
+                    <h4 className="mb-2 text-xs font-semibold text-muted-foreground">{TRIMESTER_LABEL[tri]}</h4>
+                    <ul className="space-y-2">
+                      {triRows.map((row) => (
+                        <li
+                          key={row.id}
+                          className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                        >
+                          <span className="font-semibold text-foreground">{row.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {classes.find((c) => c.id === row.class_id)?.name ?? ""}
+                          </span>
+                          <span className="ms-auto flex gap-2">
+                            <button type="button" className="btn-text text-xs" onClick={() => void assignDate(row)}>
+                              تعيين التاريخ ({formatDayLabelAr(dateKey)})
+                            </button>
+                            <button type="button" className="btn-text text-xs" onClick={() => startEdit(row)}>
+                              تعديل
+                            </button>
+                            <button type="button" className="btn-text text-xs" onClick={() => void remove(row)}>
+                              حذف
+                            </button>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent dir="rtl" className="text-start">
+          <DialogHeader>
+            <DialogTitle>إنشاء الفروض والامتحان الافتراضية</DialogTitle>
+            <DialogDescription>
+              تُنشأ الفروض (الفرض الأول، الفرض الثاني، الامتحان) بدون تاريخ، ولا يُعاد إنشاء ما هو موجود.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <select
+              className="field-input"
+              aria-label="القسم"
+              value={createClass}
+              onChange={(e) => setCreateClass(e.target.value)}
+            >
+              <option value="">اختر القسم</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              className="field-input"
+              aria-label="الثلاثي"
+              value={createTri}
+              onChange={(e) => setCreateTri(e.target.value as "1" | "2" | "3")}
+            >
+              {(["1", "2", "3"] as const).map((tri) => (
+                <option key={tri} value={tri}>
+                  {TRIMESTER_LABEL[tri]}
+                </option>
+              ))}
+            </select>
+            {createMsg ? <p className="text-sm text-destructive">{createMsg}</p> : null}
+          </div>
+          <DialogFooter className="gap-2">
+            <button type="button" className="btn-text" onClick={() => setCreateOpen(false)}>
+              إلغاء
+            </button>
+            <button type="button" className="btn-primary" disabled={busy} onClick={() => void createDefaults()}>
+              {busy ? "جارٍ الإنشاء…" : "إنشاء"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <CourseFilesPanel client={client} teacherId={teacherId} />
     </section>
   );
 }
