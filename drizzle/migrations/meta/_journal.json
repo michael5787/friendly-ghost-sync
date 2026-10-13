@@ -78,6 +78,13 @@
       "when": 1791911629304,
       "tag": "0010_course_files",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791911648565,
+      "tag": "0011_agenda_undated_trimester_events",
+      "breakpoints": true
     }
   ]
 }
