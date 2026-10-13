@@ -229,6 +229,60 @@ export type Database = {
           },
         ]
       }
+      course_files: {
+        Row: {
+          chapter_id: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          level_id: string
+          mime_type: string | null
+          size_bytes: number | null
+          teacher_id: string
+          title: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          level_id: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          teacher_id: string
+          title: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          level_id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          teacher_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_files_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_files_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evaluation_grades: {
         Row: {
           comment: string | null
