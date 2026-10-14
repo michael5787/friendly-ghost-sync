@@ -203,7 +203,9 @@ export function UsersPanel({ client }: { client: SupabaseClient<Database> }) {
                         <span>{STATUS_LABEL[r.status]}</span>
                         {isPlaceholderEmail(r.email) ? (
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-primary">
-                            أنشأه الأستاذ — بريد مؤقت، يُرجى التحديث
+                            {creatorName(r.created_by)
+                              ? `أنشأه الأستاذ: ${creatorName(r.created_by)}`
+                              : "أنشأه الأستاذ — بريد مؤقت، يُرجى التحديث"}
                           </span>
                         ) : null}
                         {r.space === "talameed" ? (
