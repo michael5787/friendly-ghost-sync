@@ -118,6 +118,11 @@ export function UsersPanel({ client }: { client: SupabaseClient<Database> }) {
 
   const levelName = (id: string | null) => levels.find((l) => l.id === id)?.name ?? "—";
   const className = (id: string | null) => classes.find((c) => c.id === id)?.name ?? "—";
+  const creatorName = (id: string | null) => {
+    if (!id) return null;
+    const creator = rows.find((r) => r.id === id);
+    return creator ? creator.full_name || creator.email : null;
+  };
   const teacherClassIdsOf = (teacherId: string) =>
     teacherClasses.filter((t) => t.teacher_id === teacherId).map((t) => t.class_id);
 
