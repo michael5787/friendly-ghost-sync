@@ -911,12 +911,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_placeholder_student: {
+        Args: { _student_id: string }
+        Returns: boolean
+      }
+      create_placeholder_student: {
+        Args: { _class_id: string; _first_name: string; _last_name: string }
+        Returns: Json
+      }
+      delete_placeholder_student: {
+        Args: { _student_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      rename_placeholder_student: {
+        Args: { _first_name: string; _last_name: string; _student_id: string }
+        Returns: Json
       }
       shares_class: {
         Args: { _target: string; _viewer: string }
